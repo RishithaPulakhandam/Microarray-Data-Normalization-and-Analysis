@@ -1,0 +1,119 @@
+
+#Load the marray library and the swirl data set
+    install.packages("BiocManager")
+
+BiocManager::install("marray")
+library(marray)
+data("swirl")
+maImage(swirl)
+ 
+ 
+#MvA plot of array 3 
+maPlot(swirl[,3],legend.func = NULL, lines.func = NULL, main='MvA plot of array 3 without stratified lines')
+ 
+ 
+# Normalize array 3 
+swirl.norm <- maNorm(swirl[,3], norm = "median")
+# MvA plot of the normalized array 
+ maPlot(swirl.norm,legend.func = NULL, lines.func = NULL, main='MvA plot of array 3 without stratified lines-Q4')
+# loess global intensity normalization.
+ swirl.norm.loess<- maNorm(swirl[,3], norm = "loess") 
+maPlot(swirl.norm.loess, legend.func = NULL, lines.func = NULL, main="MvA Plot of Array without Stratified Lines after normalization - Q6")
+ 
+# read in raw GenePix files 
+
+> dir.path <- "/Users/yourname/Desktop"
+> a.cdna <- read.GenePix(path=dir.path,name.Gf = "F532 Median",name.Gb ="B532 Median", name.Rf = "F635 Median", name.Rb = "B635 Median",name.W ="Flags")
+
+library(convert) 
+dir.path <- "/Users/rishithapulakhandam/Downloads/GenePix_files"
+a.cdna  <- read.maimages(files=c("patient1.gpr","patient2.gpr"),path=dir.path,source = "genepix",other.columns=list("Flags")) 
+a.cdna <- as(a.cdna,"marrayRaw")
+
+# normalize both arrays and MvA plots for each array 
+#no normalization for patient 1
+a.cdna.norm.pl <- maNorm(a.cdna[,1], norm="none")
+maPlot(a.cdna.norm.pl, legend.func = NULL, lines.func = NULL, main="Patient 1- without Normalization ")
+ 
+
+#print-tip loess Normalization for patient 1
+a.cdna.norm.pl <- maNorm(a.cdna[,1], norm="p")
+maPlot(a.cdna.norm.pl, legend.func = NULL, lines.func = NULL, main="Patient 1- Print-tip loess Normalization ")
+ 
+#Scale print-tip Normalization for patient 1
+a.cdna.norm.pl <- maNorm(a.cdna[,1], norm="scalePrintTipMAD")
+maPlot(a.cdna.norm.pl, legend.func = NULL, lines.func = NULL, main="Patient 1- Scale Print-tip Normalization ")
+ 
+#no normalization for patient 2
+a.cdna.norm2.p2 <- maNorm(a.cdna[,2], norm="none")
+maPlot(a.cdna.norm2.p2, legend.func = NULL, lines.func = NULL, main="Patient 2- without Normalization ")
+ 
+#print-tip loess Normalization for patient 1
+a.cdna.norm2.p2 <- maNorm(a.cdna[,2], norm="p")
+maPlot(a.cdna.norm2.p2, legend.func = NULL, lines.func = NULL, main="Patient 2- Print-tip loess Normalization ")
+ 
+
+#Scale print-tip Normalization for patient 1
+a.cdna.norm2.p2 <- maNorm(a.cdna[,1], norm="scalePrintTipMAD")
+maPlot(a.cdna.norm2.p2, legend.func = NULL, lines.func = NULL, main="Patient 2- Scale Print-tip Normalization ")
+ 
+# create a data matrix 
+
+library(limma)
+data.matrix1 <- maNorm(a.cdna[,1])
+data.matrix2 <- maNorm(a.cdna[,2])
+probe_sets<-data.matrix1@maGnames@maLabels
+values.pt1<-data.matrix1@maM
+values.pt2<-data.matrix2@maM
+m<-matrix(c(values.pt1,values.pt2),nrow=19200,ncol=2,byrow=FALSE)
+colnames(m)<-c("Pateint 1","Patient 2")
+row.names(m)<-probe_sets
+View(m)
+dim(m)
+# read in 3 raw Affymetrix .CEL files and normalize  
+> fns <- sort(list.celfiles(path=dir.path,full.names=TRUE))
+> data.affy <- ReadAffy(filenames=fns,phenoData=NULL)
+
+library(fpc)
+library(limma)
+library(affy)
+library(affydata)
+library(affyPLM)
+dir.path <- "/Users/rishithapulakhandam/Downloads/HGU133plus_files"
+fns <- sort(list.celfiles(path=dir.path,full.names=TRUE))
+data.affy <- ReadAffy(filenames=fns,phenoData=NULL)
+
+#Create the normalized data matrices 
+Be sure to use normalize.method="quantiles", summary.method="medianpolish", and for RMA: pmcorrect.method="pmonly"
+MAS: pmcorrect.method="mas”
+
+# RMA Algorithm
+set_rma <- expresso(data.affy,bgcorrect.method="rma",
+normalize.method="quantiles",
+pmcorrect.method="pmonly",
+summary.method="medianpolish")
+exprs(set_rma)
+
+ 
+
+#MAS Algorithm
+set_mas <- expresso(data.affy,bgcorrect.method="mas",
+normalize.method="quantiles",
+pmcorrect.method="mas",
+summary.method="medianpolish")
+exprs(set_mas)
+
+ 
+# calculate the correlation between the 3 arrays for both normalized data matrices.  
+
+cor_rma <- cor(exprs(set_rma))
+cor_mas <- cor(exprs(set_mas))
+
+avg_cor_rma <-mean(cor_rma)
+avg_cor_mas <-mean(cor_mas)
+cat("Average Correlation for Quantiles Normalization:",avg_cor_rma, "\n")
+cat("Average Correlation for RNA Normalization:",avg_cor_mas, "\n")
+
+ 
+
+
